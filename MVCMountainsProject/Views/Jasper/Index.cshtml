@@ -1,0 +1,184 @@
+﻿@model IEnumerable<MVCMountainsProject.Models.WeatherModel>
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div id="dashboard_div">
+      <!--Divs that will hold each control and chart-->
+      <div id="monthfilter_div"></div>
+      <div id="yearfilter_div"></div>
+      <div id="piechart_div" style="position: absolute; left: 0px; top: 170px; width: 700px; height: 400px;"></div>
+      <div id="barchart_div" style="position: absolute; right: 0px; top: 170px; width: 700px; height: 400px;"></div>
+      <div id="columnchart_div" style="position: absolute; right: 700px; top: 170px; width: 700px; height: 400px;"></div>
+      <div id="proxyBarTable" style="display: none;"></div>
+      <div id="proxyColumnTable" style="display: none;"></div>
+</div>
+
+<div style="position: absolute; width: 1400px; height: 340px; top: 600px; overflow: scroll">
+    <table class="table">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Date)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Snowfall)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Forecast)
+            </th>
+        </tr>
+
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                @Html.DisplayFor(modelItem => item.Date)
+                </td>
+                <td>
+                @Html.DisplayFor(modelItem => item.Snowfall)
+                </td>
+                <td>
+                @Html.DisplayFor(modelItem => item.Forecast)
+                </td>
+            </tr>
+        }
+</table>
+</div>
+
+@section Scripts{
+        <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+        <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script> 
+        <script type="text/javascript">
+
+            google.charts.load('current', { 'packages': ['corechart', 'controls'] });
+            google.charts.setOnLoadCallback(DrawonLoad);
+
+            function DrawonLoad() {
+                $(function () {
+                    $.ajax({
+                        type: 'Get',
+                        url: 'Jasper/GetChartJSON',
+                        success: function (chartsdata) {
+
+                            var data = google.visualization.arrayToDataTable(chartsdata);
+                            var dashboard = new google.visualization.Dashboard(
+                                document.getElementById('dashboard_div'));
+
+                            var monthFilter = new google.visualization.ControlWrapper({
+                              'controlType': 'CategoryFilter',
+                              'containerId': 'monthfilter_div',
+                              'options': {
+                                'filterColumnLabel': 'Month'
+                              }
+                            });
+
+                            var yearFilter = new google.visualization.ControlWrapper({
+                                'controlType': 'CategoryFilter',
+                                'containerId': 'yearfilter_div',
+                                'options': {
+                                    'filterColumnLabel': 'Year'
+                                }
+                            });
+
+                            // Create a pie chart, passing some options
+                            var pieChart = new google.visualization.ChartWrapper({
+                                'chartType': 'PieChart',
+                                'containerId': 'piechart_div',
+                                'options': {
+                                    'title': 'Jasper snowfall percentages',
+                                    'pieSliceText': 'value',
+                                    'legend': 'right'
+                                },
+                                'view': {
+                                  'columns': [1, 2]
+                                }
+                            });
+
+                            var barChart = new google.visualization.ChartWrapper({
+                                'chartType': 'BarChart',
+                                'containerId': 'barchart_div',
+                                'options': {
+                                    'title': 'Jasper snowfall by month',
+                                    'legend': 'right'
+                                }
+                            });
+
+                            var columnChart = new google.visualization.ChartWrapper({
+                                'chartType': 'ColumnChart',
+                                'containerId': 'columnchart_div',
+
+                                'options': {
+                                    'title': 'Jasper snowfall by year',
+
+                                'legend': 'right'
+                                }
+                            });
+
+                            var proxyBarTable = new google.visualization.ChartWrapper({
+                                'chartType': 'Table',
+                                'containerId': 'proxyBarTable',
+                                'options': {
+                                    'page': 'enable',
+                                    'pageSize': 1
+                                },
+                                'view': {
+                                    'columns': [1]
+                                }
+                            });
+
+                            google.visualization.events.addListener(proxyBarTable, 'ready', function () {
+                                var dt = proxyBarTable.getDataTable();
+                                var groupedData = google.visualization.data.group(dt, [0], [{
+                                    'column': 2,
+                                    'type': 'number',
+                                    'label': dt.getColumnLabel(2),
+                                    'aggregation': google.visualization.data.sum
+                                }]);
+
+                                barChart.setDataTable(groupedData)
+                                barChart.draw();
+                            });
+
+                            var proxyColumnTable = new google.visualization.ChartWrapper({
+                                'chartType': 'Table',
+                                'containerId': 'proxyColumnTable',
+                                'options': {
+                                    'page': 'enable',
+                                    'pageSize': 1
+                                },
+                                'view': {
+                                    'columns': [1]
+                                }
+                            });
+
+                            google.visualization.events.addListener(proxyColumnTable, 'ready', function () {
+                                var dt = proxyColumnTable.getDataTable();
+                                var groupedData = google.visualization.data.group(dt, [3], [{
+                                    'column': 2,
+                                    'type': 'number',
+                                    'label': dt.getColumnLabel(2),
+                                    'aggregation': google.visualization.data.sum
+                                }]);
+
+                                columnChart.setDataTable(groupedData)
+                                columnChart.draw();
+                            });
+
+                            dashboard.bind([monthFilter, yearFilter], [pieChart, proxyBarTable, proxyColumnTable]);
+
+                            dashboard.draw(data);
+                        },
+                        failure: function (chartsdata) {
+                            alert(chartsdata);
+                        },
+                        error: function (chartsdata) {
+                            alert(chartsdata);
+                        }
+                    })
+                });
+            }
+        </script>
+}
+
+
